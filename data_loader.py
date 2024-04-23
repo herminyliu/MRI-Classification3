@@ -3,6 +3,7 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     import calculate_Ahat
     import pandas as pd
     import random
+    import numpy as np
 
     SC_normalized_lst = []
     FUN_normalized_lst = []
@@ -23,18 +24,37 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
         else:
             label_lst.append(int(1))  # 患病了
         for file in os.listdir(file_path):
+            SC_temp = np.empty(())
+            FUN_temp = np.empty(())
+            feature_matrix_temp = np.empty(())
+            diff_matrix_temp = np.empty(())
             if file.endswith('_SC_normalized.csv'):
-                SC_temp = pd.read_csv(os.path.join(file_path, file)).to_numpy()  # 转换为numpy数组加快计算效率
-                if SC_temp.shape != (147, 147):
-                    raise Exception(f"SC文件的维度不为(148,148), 异常文件地址：{file_path}, 维度：{SC_temp.shape}")
+                SC_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()  # 转换为numpy数组加快计算效率
+                if SC_temp.shape != (148, 148):
+                    print(f"SC文件的维度不为(148,148), 异常文件地址：{file_path}, 维度：{SC_temp.shape}")
+                    continue
                 SC_normalized_lst.append(SC_temp)
             if file.endswith('_FUN_normalized.csv'):
-                FUN_temp = pd.read_csv(os.path.join(file_path, file)).to_numpy()
+                FUN_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+               
+                if FUN_temp.shape != (148,490):
+                    print(f"SC文件的维度不为(148,490), 异常文件地址：{file_path}, 维度：{FUN_temp.shape}")
+                    continue
                 FUN_normalized_lst.append(FUN_temp)
             if file.endswith('_FUN_corr.csv'):
-                feature_matrix_lst.append(pd.read_csv(os.path.join(file_path, file)).to_numpy())
+                feature_matrix_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+
+                if feature_matrix_temp.shape != (148, 148):
+                    print(f"feature_matrix文件的维度不为(148,148), 异常文件地址：{file_path}, 维度：{feature_matrix_temp.shape}")
+                    continue
+                feature_matrix_lst.append(feature_matrix_temp)
             if file.endswith('_FUN_diff.csv'):
-                diff_matrix_lst.append(pd.read_csv(os.path.join(file_path, file)).to_numpy())
+                diff_matrix_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+
+                if diff_matrix_temp.shape != (11026, 490):
+                    print(f"diff_matrix文件的维度不为(11026,490), 异常文件地址：{file_path}, 维度：{diff_matrix_temp.shape}")
+                    continue
+                diff_matrix_lst.append(diff_matrix_temp)
 
         id_count = id_count + 1
         print(f"=======已完成{id_count}个被试者数据的读取=======")
@@ -56,12 +76,15 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     fusion_count = 0
     for i in range(len(Af_lst)):
         Ahat_lst.append(calculate_Ahat.fusion(theta.item(), Af_lst[i], As_lst[i]))
-        fusion_count = fusion_count + 1
-        print(f"=======已完成{fusion_count}个Ahat矩阵的融合生成=======")
+        print(f"=======已完成{i}个Ahat矩阵的融合生成=======")
+    print(f"*******Af_lst获取完毕，长度为{len(Af_lst)*******}")
 
     dataset = []
     for i in range(len(Ahat_lst)):
         dataset.append(bulid_single_graph(Ahat_lst[i], feature_matrix_lst[i], label_lst[i]))  # 这里还没有label
+        print(f"=======已完成{i}个被试者脑图的生成=======")
+    print(f"*******Ahat_lst获取完毕，长度为{len(Ahat_lst)*******}")
+
     # 返回列表，列表中的每个元素均是一个图
     return dataset
 
@@ -78,14 +101,6 @@ def bulid_single_graph(adjacency_matrix, node_features, is_ill):
     import torch
     from torch_geometric.data import Data
     # 假设连接关系矩阵存储在一个名为 'adjacency_matrix.csv' 的CSV文件中
-    # 后面还有一个.value是防止index搞怪
-    if is_ill == 'Control':
-        y = torch.tensor(0)
-    elif is_ill == 'Sdo':
-        y = torch.tensor(1)
-    else:
-        raise IndexError("Control/Sdo表示不明！")
-
     # 获取连接矩阵的行数，即节点数量
     num_nodes = adjacency_matrix.shape[0]
 
@@ -106,4 +121,4 @@ def bulid_single_graph(adjacency_matrix, node_features, is_ill):
     edge_weights = torch.tensor(edge_weights, dtype=torch.long).t().contiguous()  # 边的权重
 
     # 打印成功转换信息，并且返回pyG的graph格式
-    return Data(x=x, edge_index=edge_index, edge_attr=edge_weights, y=y)
+    return Data(x=x, edge_index=edge_index, edge_attr=edge_weights, y=is_ill)

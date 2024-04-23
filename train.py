@@ -69,9 +69,10 @@ def one_batch_valid(random_seed):
 
 
 def one_epoch(epoch, best_loss, random_seed):
-    print(f"==========第{epoch}轮训练开始===========")
+    print(f"***************第{epoch}轮训练开始***************")
     train_loss_one_epoch = 0
     for i in range(0, int(dataset_total_length/batch_size) - 1):  # -1是为了留一个训练集
+        print(f"***************第{epoch}轮{i+1}批训练开始***************")
         train_loss_one_batch = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
         train_loss_one_epoch = train_loss_one_epoch + train_loss_one_batch
     valid_loss_one_epoch, acc_one_epoch = one_batch_valid(random_seed)

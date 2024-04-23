@@ -1,9 +1,0 @@
-./train.py: line 1: import: command not found
-./train.py: line 2: import: command not found
-./train.py: line 3: import: command not found
-from: can't read /var/mail/data_loader
-./train.py: line 5: import: command not found
-./train.py: line 6: $'\r': command not found
-./train.py: line 7: $'\r': command not found
-./train.py: line 8: syntax error near unexpected token `('
-./train.py: line 8: `def train(my_model_train, train_loader):'

@@ -42,7 +42,5 @@ def fusion(theta, Af, As):
 
     # 计算 A
     I = np.eye(len(Af))
-    print(Af)
-    print(As)
     Ahat = theta1 * Af + theta2 * As + I
     return Ahat
