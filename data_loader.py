@@ -77,13 +77,13 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     for i in range(len(Af_lst)):
         Ahat_lst.append(calculate_Ahat.fusion(theta.item(), Af_lst[i], As_lst[i]))
         print(f"=======已完成{i}个Ahat矩阵的融合生成=======")
-    print(f"*******Af_lst获取完毕，长度为{len(Af_lst)*******}")
+    print(f"*******Af_lst获取完毕，长度为{len(Af_lst)}*******")
 
     dataset = []
     for i in range(len(Ahat_lst)):
         dataset.append(bulid_single_graph(Ahat_lst[i], feature_matrix_lst[i], label_lst[i]))  # 这里还没有label
         print(f"=======已完成{i}个被试者脑图的生成=======")
-    print(f"*******Ahat_lst获取完毕，长度为{len(Ahat_lst)*******}")
+    print(f"*******Ahat_lst获取完毕，长度为{len(Ahat_lst)}*******")
 
     # 返回列表，列表中的每个元素均是一个图
     return dataset

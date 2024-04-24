@@ -63,18 +63,20 @@ def one_batch_train(dataset_slice, random_seed):
 
 def one_batch_valid(random_seed):
     from torch_geometric.loader import DataLoader
-    dataset_lst = load_data(data_path, slice(949, 999), random_seed, M, sigma, theta)  # 稳定选择最后50个作为每个epoch后的验证集
+    dataset_lst = load_data(data_path, slice(950, 999), random_seed, M, sigma, theta)  # 稳定选择最后49个作为每个epoch后的验证集,有一个被试者缺少FUN数据
     valid_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst) + 1, shuffle=False)  # dataloader.py里已经打散过了
     return valid(my_model_valid=my_model, valid_loader=valid_loader)
 
 
 def one_epoch(epoch, best_loss, random_seed):
-    print(f"***************第{epoch}轮训练开始***************")
+    print(f"***************第{epoch+1}轮训练开始***************")
     train_loss_one_epoch = 0
     for i in range(0, int(dataset_total_length/batch_size) - 1):  # -1是为了留一个训练集
-        print(f"***************第{epoch}轮{i+1}批训练开始***************")
+        print(f"***************第{epoch+1}轮{i+1}批训练开始***************")
         train_loss_one_batch = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
         train_loss_one_epoch = train_loss_one_epoch + train_loss_one_batch
+        print(f'Epoch: {epoch:01d}, Batch: {i+1:01d}, Train Loss:{train_loss_one_batch:.3f}')
+
     valid_loss_one_epoch, acc_one_epoch = one_batch_valid(random_seed)
     train_loss_lst.append(train_loss_one_epoch)
     valid_loss_lst.append(valid_loss_one_epoch)
@@ -112,7 +114,7 @@ def save_fig(train_acc_lst, test_acc_lst):
 
     # 显示图例
     plt.legend()
-    file_path = './Result_Figure/node_feature_rfMRI/Accuracy_' + str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) + '.png'
+    file_path = './Result_Figure/Accuracy_' + str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) + '.png'
     print(f"*******图片已成功保存在：{file_path}")
     plt.savefig(file_path, dpi=600)
 
@@ -130,7 +132,7 @@ if __name__ == '__main__':
     weight_decay = 0.01  # 超参数
     batch_size = 50
     epoches_to_run = 50
-    dataset_total_length = 1000
+    dataset_total_length = 999  # 原本为1000，但有一个被试缺少FUN数据
     train_acc_lst = []
     train_loss_lst = []
     valid_acc_lst = []
@@ -154,10 +156,10 @@ if __name__ == '__main__':
 
     # 保存模型（整个模型）
     my_model.eval()
-    torch.save(model, './Result_Model_Para/node_feature_rfMRI/pyg_model_' + the_datetime_of_run + '.pth')
+    torch.save(model, './Result_Model_Para/pyg_model_' + the_datetime_of_run + '.pth')
 
     # 定义一个文件名来保存输出信息
-    output_file = "Result_Figure/node_feature_rfMRI/model_summary_" + the_datetime_of_run + ".txt"
+    output_file = "./Result_Model_Para/model_summary_" + the_datetime_of_run + ".txt"
     # 将输出信息写入到txt文件
     with open(output_file, "w") as f:
         f.write(str(model) + '\n')
