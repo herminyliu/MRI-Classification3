@@ -75,8 +75,12 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     Ahat_lst = []  # 这个作为连接矩阵！
     fusion_count = 0
     for i in range(len(Af_lst)):
-        Ahat_lst.append(calculate_Ahat.fusion(theta.item(), Af_lst[i], As_lst[i]))
-        print(f"=======已完成{i}个Ahat矩阵的融合生成=======")
+        Ahat, is_nan = calculate_Ahat.fusion(theta.item(), Af_lst[i], As_lst[i])
+        Ahat_lst.append(Ahat)
+        if is_nan == 0:
+            print(f"=======已完成{i}个Ahat矩阵的融合生成=======")
+        else:
+            print(f"=======已完成{i}个Ahat矩阵的融合生成，该批Ahat_lst中的第{i+1}Ahat出现{is_nan}个NaN值=======")
     print(f"*******Af_lst获取完毕，长度为{len(Af_lst)}*******")
 
     dataset = []

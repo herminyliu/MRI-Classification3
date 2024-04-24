@@ -43,4 +43,12 @@ def fusion(theta, Af, As):
     # 计算 A
     I = np.eye(len(Af))
     Ahat = theta1 * Af + theta2 * As + I
-    return Ahat
+    
+    # 检查有无NaN值
+    is_nan = 0
+    if np.isnan(Ahat).any():
+        print("数组中存在 NaN 值")
+        # 将 NaN 替换为 0
+        is_nan = np.isnan(Ahat).sum()
+        Ahat[np.isnan(Ahat)] = 0
+    return Ahat, is_nan
