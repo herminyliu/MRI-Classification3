@@ -61,7 +61,7 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
 
     if len(SC_normalized_lst) == len(FUN_normalized_lst) & len(FUN_normalized_lst) == len(feature_matrix_lst) \
             & len(feature_matrix_lst) == len(diff_matrix_lst):
-        print(f"*******SC_normalized_lst FUN_normalized_lst feature_matrix_lst 获取完毕，长度均为{len(SC_normalized_lst)}*******")
+                print(f"*******SC_normalized_lst FUN_normalized_lst feature_matrix_lst diff_matrix_lst获取完毕，长度均为{len(SC_normalized_lst)}*******")
     else:
         raise ValueError(f"*******列表长度不同*******")
 

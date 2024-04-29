@@ -8,7 +8,7 @@ import model
 def train(my_model_train, train_loader):
     my_model_train.train()
     total_loss = 0
-
+    loss_lst = []
     for _, train_data in enumerate(train_loader):  # Iterate in batches over the training dataset.
         out = my_model_train(train_data.x, train_data.edge_index, train_data.batch)  # Perform a single forward pass.
         loss = criterion(out, train_data.y)  # Compute the loss.
@@ -16,7 +16,8 @@ def train(my_model_train, train_loader):
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad()  # Clear gradients.
         total_loss = total_loss + loss
-    return total_loss
+        loss_lst.append(loss)
+    return total_loss, loss_lst
 
 
 def valid(my_model_valid, valid_loader):
@@ -57,14 +58,14 @@ def split_dataset(dataset):
 def one_batch_train(dataset_slice, random_seed):
     from torch_geometric.loader import DataLoader
     dataset_lst = load_data(data_path, dataset_slice, random_seed, M, sigma, theta)
-    train_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst) + 1, shuffle=False)  # dataloader.py里已经打散过了
+    train_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst), shuffle=False)  # dataloader.py里已经打散过了
     return train(my_model_train=my_model, train_loader=train_loader)
 
 
 def one_batch_valid(random_seed):
     from torch_geometric.loader import DataLoader
     dataset_lst = load_data(data_path, slice(950, 999), random_seed, M, sigma, theta)  # 稳定选择最后49个作为每个epoch后的验证集,有一个被试者缺少FUN数据
-    valid_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst) + 1, shuffle=False)  # dataloader.py里已经打散过了
+    valid_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst), shuffle=False)  # dataloader.py里已经打散过了
     return valid(my_model_valid=my_model, valid_loader=valid_loader)
 
 
@@ -73,9 +74,10 @@ def one_epoch(epoch, best_loss, random_seed):
     train_loss_one_epoch = 0
     for i in range(0, int(dataset_total_length/batch_size) - 1):  # -1是为了留一个训练集
         print(f"***************第{epoch+1}轮{i+1}批训练开始***************")
-        train_loss_one_batch = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
+        train_loss_one_batch, loss_lst = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
         train_loss_one_epoch = train_loss_one_epoch + train_loss_one_batch
         print(f'Epoch: {epoch:01d}, Batch: {i+1:01d}, Train Loss:{train_loss_one_batch:.3f}')
+        print(f'Epoch: {epoch:01d}, Batch: {i+1:01d}, Loss List:{[tensor.item() for tensor in loss_lst]}')
 
     valid_loss_one_epoch, acc_one_epoch = one_batch_valid(random_seed)
     train_loss_lst.append(train_loss_one_epoch)
