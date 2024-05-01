@@ -1,4 +1,4 @@
-def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
+def load_data(data_path, dataset_slice, dataset_total_length, random_seed, M, sigma, theta):
     import os
     import calculate_Ahat
     import pandas as pd
@@ -17,51 +17,81 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     random.seed(random_seed)
     inidivial_lst = os.listdir(data_path)
     random.shuffle(inidivial_lst)  # 每一个epoch的随机数种子均不一样，打散情况不同。但同一epoch中，随机数种子相同，确保每个被试的数据均使用且仅使用一遍
+    print("本epoch样本的读取顺序：")
+    print(inidivial_lst)
     for sub_folder in inidivial_lst[dataset_slice]:
+        is_wrong = False
         file_path = os.path.join(data_path, sub_folder)
         if search_id_in_file(label_contents, str(sub_folder)):
             label_lst.append(int(0))  # 没患病
         else:
             label_lst.append(int(1))  # 患病了
+
         for file in os.listdir(file_path):
             SC_temp = np.empty(())
             FUN_temp = np.empty(())
             feature_matrix_temp = np.empty(())
             diff_matrix_temp = np.empty(())
+
             if file.endswith('_SC_normalized.csv'):
                 SC_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()  # 转换为numpy数组加快计算效率
+                SC_normalized_lst.append(SC_temp)
+
                 if SC_temp.shape != (148, 148):
                     print(f"SC文件的维度不为(148,148), 异常文件地址：{file_path}, 维度：{SC_temp.shape}")
-                    continue
-                SC_normalized_lst.append(SC_temp)
+                    is_wrong = True
+                if np.isnan(SC_temp).any() > 0:
+                    print(f"SC文件存在{np.isnan(SC_temp).any()}个NaN值, 异常文件地址：{file_path}, 维度：{SC_temp.shape}")
+                    is_wrong = True
+
             if file.endswith('_FUN_normalized.csv'):
                 FUN_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+                FUN_normalized_lst.append(FUN_temp)
                
                 if FUN_temp.shape != (148,490):
-                    print(f"SC文件的维度不为(148,490), 异常文件地址：{file_path}, 维度：{FUN_temp.shape}")
-                    continue
-                FUN_normalized_lst.append(FUN_temp)
+                    print(f"FUN文件的维度不为(148,490), 异常文件地址：{file_path}, 维度：{FUN_temp.shape}")
+                    is_wrong = True
+                if np.isnan(FUN_temp).any() > 0:
+                    print(f"FUN文件存在{np.isnan(FUN_temp).any()}个NaN值, 异常文件地址：{file_path}, 维度：{FUN_temp.shape}")
+                    is_wrong = True
+
             if file.endswith('_FUN_corr.csv'):
                 feature_matrix_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+                feature_matrix_lst.append(feature_matrix_temp)
 
                 if feature_matrix_temp.shape != (148, 148):
                     print(f"feature_matrix文件的维度不为(148,148), 异常文件地址：{file_path}, 维度：{feature_matrix_temp.shape}")
-                    continue
-                feature_matrix_lst.append(feature_matrix_temp)
+                    is_wrong = True
+                if np.isnan(feature_matrix_temp).any() > 0:
+                    print(f"feature_matrix_temp文件存在{np.isnan(feature_matrix_temp).any()}个NaN值, 异常文件地址：{file_path}, 维度：{feature_matrix_temp.shape}")
+                    is_wrong = True
+
             if file.endswith('_FUN_diff.csv'):
                 diff_matrix_temp = pd.read_csv(os.path.join(file_path, file), header=None).to_numpy()
+                diff_matrix_lst.append(diff_matrix_temp)
 
                 if diff_matrix_temp.shape != (11026, 490):
                     print(f"diff_matrix文件的维度不为(11026,490), 异常文件地址：{file_path}, 维度：{diff_matrix_temp.shape}")
-                    continue
-                diff_matrix_lst.append(diff_matrix_temp)
+                    is_wrong = True
+                if np.isnan(diff_matrix_temp).any() > 0:
+                    print(f"diff_matrix文件存在{np.isnan(diff_matrix_temp).any()}个NaN值, 异常文件地址：{file_path}, 维度：{diff_matrix_temp.shape}")
+                    is_wrong = True
 
-        id_count = id_count + 1
-        print(f"=======已完成{id_count}个被试者数据的读取=======")
+        if is_wrong == True:
+            diff_matrix_lst.pop()
+            feature_matrix_lst.pop()
+            FUN_normalized_lst.pop()
+            SC_normalized_lst.pop()
+            label_lst.pop()
+            dataset_total_length = dataset_total_length - 1
+            print(f"+++++++被试者{file_path}的数据异常，不予读入+++++++")
+        else:
+            id_count = id_count + 1
+            print(f"=======已完成{id_count}个被试者数据的读取=======")
 
     if len(SC_normalized_lst) == len(FUN_normalized_lst) & len(FUN_normalized_lst) == len(feature_matrix_lst) \
-            & len(feature_matrix_lst) == len(diff_matrix_lst):
-                print(f"*******SC_normalized_lst FUN_normalized_lst feature_matrix_lst diff_matrix_lst获取完毕，长度均为{len(SC_normalized_lst)}*******")
+            & len(feature_matrix_lst) == len(diff_matrix_lst) & len(diff_matrix_lst) == len(label_lst):
+                print(f"*******SC_normalized_lst FUN_normalized_lst feature_matrix_lst diff_matrix_lst label_lst获取完毕，长度均为{len(SC_normalized_lst)}*******")
     else:
         raise ValueError(f"*******列表长度不同*******")
 
@@ -76,21 +106,22 @@ def load_data(data_path, dataset_slice, random_seed, M, sigma, theta):
     fusion_count = 0
     for i in range(len(Af_lst)):
         Ahat, is_nan = calculate_Ahat.fusion(theta.item(), Af_lst[i], As_lst[i])
-        Ahat_lst.append(Ahat)
         if is_nan == 0:
-            print(f"=======已完成{i}个Ahat矩阵的融合生成=======")
+            Ahat_lst.append(Ahat)
+            print(f"=======已完成{i+1}个Ahat矩阵的融合生成=======")
         else:
-            print(f"=======已完成{i}个Ahat矩阵的融合生成，该批Ahat_lst中的第{i+1}Ahat出现{is_nan}个NaN值=======")
-    print(f"*******Af_lst获取完毕，长度为{len(Af_lst)}*******")
+            print(f"=======已完成{i+1}个Ahat矩阵的融合生成，但是这个Ahat出现{is_nan}个NaN值，该被试{inidivial_lst[dataset_slice.start+i]}会被跳过=======")
+
+    print(f"*******Ahat_lst获取完毕，长度为{len(Af_lst)}*******")
 
     dataset = []
     for i in range(len(Ahat_lst)):
         dataset.append(bulid_single_graph(Ahat_lst[i], feature_matrix_lst[i], label_lst[i]))  # 这里还没有label
-        print(f"=======已完成{i}个被试者脑图的生成=======")
+        print(f"=======已完成{i+1}个被试者脑图的生成=======")
     print(f"*******Ahat_lst获取完毕，长度为{len(Ahat_lst)}*******")
 
     # 返回列表，列表中的每个元素均是一个图
-    return dataset
+    return dataset, dataset_total_length
 
 
 def search_id_in_file(file_contents, target_id):

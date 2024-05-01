@@ -30,6 +30,7 @@ folder_path = "/home/liubanruo/test_data/data229"
 # 指定输出文件的路径
 output_file = "/home/liubanruo/test_data/listID_in_order.list"
 
+
 # 列出文件夹下所有子文件夹的名字，并将它们按顺序记录在一个 .list 文件中
 list_subdirectories(folder_path, output_file)
 
