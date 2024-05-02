@@ -84,16 +84,17 @@ def one_epoch(epoch, best_loss, random_seed):
     valid_loss_lst.append(valid_loss_one_epoch)
     valid_acc_lst.append(acc_one_epoch)
 
-    print(f'*******Epoch: {epoch+1:03d},Train Loss:{valid_loss_one_epoch:.6f}*******,'
-          f'*******Test Loss:{valid_loss_one_epoch:.3f},Test Acc:{acc_one_epoch:.6f}*******')
+    print(f'*******Epoch: {epoch+1:03d},Train Loss:{train_loss_one_epoch:.6f}*******')
+    print(f'*******Epoch: {epoch+1:03d},Test Loss:{valid_loss_one_epoch:.3f},Test Acc:{acc_one_epoch:.6f}*******')
     # 这里需要迭代参数M和theta
     if valid_loss_one_epoch < best_loss:
         best_loss = valid_loss_one_epoch
         print(f"======best_loss更新，新的值为:{best_loss}========")
-    # else:
+    else:
         # 减小theta以降低灰度，但保留一些像素的权重
         # M.data -= learning_rate * torch.sign(M.grad)
-        # theta.data -= learning_rate * torch.sign(theta.grad)
+        #theta.data -= learning_rate * torch.sign(theta.grad)
+        print("=======Epoch: {epoch+1:03d}，best_loss没有更新=======")
 
     return best_loss
 
@@ -120,30 +121,25 @@ def save_fig(train_loss_lst, test_acc_lst):
     print(f"*******图片已成功保存在：{file_path}")
     plt.savefig(file_path, dpi=600)
 
+    # 保存图片
+    save_fig(train_loss_lst, valid_acc_lst)
 
-if __name__ == '__main__':
-    # 模型
-    my_model = model.GCN(dataset_num_node_features=148, hidden_channels=148)
-    # 优化器
-    optimizer = torch.optim.Adam(my_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    # 损失函数
-    criterion = torch.nn.CrossEntropyLoss()
 
-    # 开始使用模型
-    for epoch in range(0, epoches_to_run):
-        best_loss = one_epoch(epoch=epoch, best_loss=best_loss, random_seed=seed_value)
-        seed_value = seed_value + 1
-
+def saving():
+    # 运行时间
     import datetime
     the_datetime_of_run = str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-    save_fig(train_loss_lst, valid_acc_lst)
+    
+    import os
+    dir_path = f'/home/liubanruo/229codev6/Result_Model_Para_{the_datetime_of_run}'
+    os.makedirs(dir_path)
 
     # 保存模型（整个模型）
     my_model.eval()
-    torch.save(model, './Result_Model_Para/pyg_model_' + the_datetime_of_run + '.pth')
-
+    torch.save(model, f'{dir_path}/pyg_model_{the_datetime_of_run}.pth')
+  
     # 定义一个文件名来保存输出信息
-    output_file = "./Result_Model_Para/model_summary_" + the_datetime_of_run + ".txt"
+    output_file = f'{dir_path}/model_summary_{the_datetime_of_run}.txt'
     # 将输出信息写入到txt文件
     with open(output_file, "w") as f:
         f.write(str(model) + '\n')
@@ -162,5 +158,28 @@ if __name__ == '__main__':
         f.write("程序作者为：" + "刘般若")
     f.close()
 
-    print(f"模型信息已保存到 {output_file},程序成功执行完毕")
+
+if __name__ == '__main__':
+    # 模型
+    my_model = model.GCN(dataset_num_node_features=148, hidden_channels=148)
+    # 优化器
+    optimizer = torch.optim.Adam(my_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    # 损失函数
+    criterion = torch.nn.CrossEntropyLoss()
+   
+    try:
+        # 开始使用模型
+        for epoch in range(0, epoches_to_run):
+            best_loss = one_epoch(epoch=epoch, best_loss=best_loss, random_seed=seed_value)
+            seed_value = seed_value + 1
+    except:
+        # 出现问题中断
+        saving()
+        print("程序临时中断")
+
+    saving()
+    print("程序成功全部执行完毕")
+        
+        
+        
 
