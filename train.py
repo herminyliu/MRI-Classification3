@@ -4,6 +4,21 @@ import torch
 from data_loader import load_data
 import model
 
+data_path = r'/home/liubanruo/test_data/data229'
+theta = torch.tensor(0.5, requires_grad=True)  # 这个参数需要迭代
+best_loss = 1e10
+M = torch.ones(490, requires_grad=True)  # 490个时间戳，这个参数需要迭代，注意为了简化这里变成了向量
+sigma = 1  # 超参数，不需要训练中迭代
+seed_value = 42
+learning_rate = 0.001  # 超参数，学习率一直再调低，避免数值爆炸哇
+weight_decay = 0.01  # 超参数
+batch_size = 50
+epoches_to_run = 20
+dataset_total_length = 998  # 原本为1000，但有一个被试缺少FUN数据
+train_loss_lst = []
+valid_acc_lst = []
+valid_loss_lst = []
+
 
 def train(my_model_train, train_loader):
     my_model_train.train()
@@ -29,7 +44,7 @@ def valid(my_model_valid, valid_loader):
         total_loss += criterion(out, valid_data.y).item()
         pred = out.argmax(dim=1)  # Use the class with the highest probability.
         print(f"pred:{pred}, true value:{valid_data.y}")
-        if torch.isnan(pred).any():  #加了一个验证，代码每次在这里报错都要报麻了
+        if torch.isnan(pred).any():  # 加了一个验证，代码每次在这里报错都要报麻了
             print(f"在验证validation过程中，第 {count} 个样本的 pred 包含 NaN!")
             continue
         if torch.isnan(valid_data.y).any():
@@ -40,38 +55,31 @@ def valid(my_model_valid, valid_loader):
     return correct / len(valid_loader.dataset), total_loss  # Derive ratio of correct predictions. 如果最后返回的正确率为0，说明所有样本的pred全是nan
 
 
-def one_batch_train(dataset_slice, random_seed):
+def one_batch_train(dataset_slice, random_seed, dataset_total_length):
     from torch_geometric.loader import DataLoader
-    global dataset_total_length  # 声明全局变量
-    global M  # 声明全局变量，不然后面需要用到M的地方会显示None
     dataset_lst, dataset_total_length = load_data(data_path, dataset_slice, dataset_total_length, random_seed, M, sigma, theta)
     train_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst), shuffle=False)  # dataloader.py里已经打散过了
     return train(my_model_train=my_model, train_loader=train_loader)
 
 
-def one_batch_valid(random_seed):
+def one_batch_valid(random_seed, dataset_total_length):
     from torch_geometric.loader import DataLoader
-    global dataset_total_length  # 声明全局变量
     dataset_lst, dataset_total_length = load_data(data_path, slice(950, dataset_total_length), dataset_total_length, random_seed, M, sigma, theta)  # 稳定选择最后48个作为每个epoch后的验证集,有一个被试者缺少FUN数据，而且还有个隐患，dataset_total_length在valid数据集读取过程中也有可能更新（valid数据集中可能也有无效数据），那么slice(950, dataset_total_length)可能会过大
     valid_loader = DataLoader(dataset_lst, batch_size=len(dataset_lst), shuffle=False)  # dataloader.py里已经打散过了
     return valid(my_model_valid=my_model, valid_loader=valid_loader)
 
 
 def one_epoch(epoch, best_loss, random_seed):
-    global dataset_total_length  # 声明全局变量
-    global M  # 声明全局变量，不然后面M.grad会报错NoneType
-    global theta  # 声明全局变量，不然后面theta.grad会报错NoneType
-    global best_loss
     print(f"***************第{epoch+1}轮训练开始***************")
     train_loss_one_epoch = 0
     for i in range(0, int(dataset_total_length/batch_size)):  # range的右端不-1来留出验证集了，因为现在长度为998/50=19 有隐患，dataset_total_length会在第一个epoch中更新的
         print(f"***************第{epoch+1}轮{i+1}批训练开始***************")
-        train_loss_one_batch, loss_lst = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
+        train_loss_one_batch, loss_lst = one_batch_train(slice(i*50,  (i+1)*50), random_seed, dataset_total_length)
         train_loss_one_epoch = train_loss_one_epoch + train_loss_one_batch
         print(f'Epoch: {epoch+1:03d}, Batch: {i+1:02d}, Train Loss:{train_loss_one_batch:.6f}')
         print(f'Epoch: {epoch+1:03d}, Batch: {i+1:02d}, Loss List:{loss_lst}')
 
-    valid_loss_one_epoch, acc_one_epoch = one_batch_valid(random_seed)
+    valid_loss_one_epoch, acc_one_epoch = one_batch_valid(random_seed, dataset_total_length)
     train_loss_lst.append(train_loss_one_epoch)
     valid_loss_lst.append(valid_loss_one_epoch)
     valid_acc_lst.append(acc_one_epoch)
@@ -82,10 +90,10 @@ def one_epoch(epoch, best_loss, random_seed):
     if valid_loss_one_epoch < best_loss:
         best_loss = valid_loss_one_epoch
         print(f"======best_loss更新，新的值为:{best_loss}========")
-    else:
+    # else:
         # 减小theta以降低灰度，但保留一些像素的权重
-        M.data -= learning_rate * torch.sign(M.grad)
-        theta.data -= learning_rate * torch.sign(theta.grad)
+        # M.data -= learning_rate * torch.sign(M.grad)
+        # theta.data -= learning_rate * torch.sign(theta.grad)
 
     return best_loss
 
@@ -114,23 +122,6 @@ def save_fig(train_loss_lst, test_acc_lst):
 
 
 if __name__ == '__main__':
-    data_path = r'/home/liubanruo/test_data/data229'
-    theta = torch.tensor(0.5, requires_grad=True)  # 这个参数需要迭代
-    best_loss = 1e10
-    M = torch.ones(490, requires_grad=True)  # 490个时间戳，这个参数需要迭代，注意为了简化这里变成了向量
-    sigma = 1  # 超参数，不需要训练中迭代
-    seed_value = 42
-    train_ratio = 0.7
-    test_ratio = 1 - train_ratio
-    learning_rate = 0.001  # 超参数，学习率一直再调低，避免数值爆炸哇
-    weight_decay = 0.01  # 超参数
-    batch_size = 50
-    epoches_to_run = 10
-    dataset_total_length = 998  # 原本为1000，但有一个被试缺少FUN数据
-    train_loss_lst = []
-    valid_acc_lst = []
-    valid_loss_lst = []
-
     # 模型
     my_model = model.GCN(dataset_num_node_features=148, hidden_channels=148)
     # 优化器
@@ -172,3 +163,4 @@ if __name__ == '__main__':
     f.close()
 
     print(f"模型信息已保存到 {output_file},程序成功执行完毕")
+

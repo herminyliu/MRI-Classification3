@@ -1,0 +1,4 @@
+  File "/home/liubanruo/229codev6/train.py", line 64
+    global best_loss
+    ^
+SyntaxError: name 'best_loss' is parameter and global

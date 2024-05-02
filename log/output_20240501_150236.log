@@ -1,0 +1,10 @@
+***************第1轮训练开始***************
+***************第1轮1批训练开始***************
+Traceback (most recent call last):
+  File "/home/liubanruo/229codev6/train.py", line 134, in <module>
+    best_loss = one_epoch(epoch=epoch, best_loss=best_loss, random_seed=seed_value)
+  File "/home/liubanruo/229codev6/train.py", line 77, in one_epoch
+    train_loss_one_batch, loss_lst = one_batch_train(slice(i*50,  (i+1)*50), random_seed)
+  File "/home/liubanruo/229codev6/train.py", line 60, in one_batch_train
+    dataset_lst, dataset_total_length = load_data(data_path, dataset_slice, dataset_total_length, random_seed, M, sigma, theta)
+UnboundLocalError: local variable 'dataset_total_length' referenced before assignment

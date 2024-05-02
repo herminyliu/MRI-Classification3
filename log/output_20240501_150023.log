@@ -1,0 +1,4 @@
+  File "/home/liubanruo/229codev6/train.py", line 7
+    global data_path = r'/home/liubanruo/test_data/data229'
+                     ^
+SyntaxError: invalid syntax
